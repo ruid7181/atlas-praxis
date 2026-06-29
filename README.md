@@ -21,6 +21,7 @@ Atlas Praxis is an open teaching studio and should not be described as an offici
 
 - Home: product overview, learning pathway, course integration, and classroom activities.
 - Studio: Leaflet map studio centred on Glasgow with OpenStreetMap tiles, attribution, Glasgow SIMD 2020v2 data zones, deprivation-rank handling, palette notes, and classification notes.
+- Cartographic Studio details: collapsible Legend, Diagram, Design Review, and Cartographic Note views inspired by *Mapping for a Sustainable World*.
 - Concepts: public teaching notes on map communication, visual perception, geovisualisation, data structure, visualisation purpose, interaction, bivariate mapping, and cartograms.
 - Critique: five-part framework covering Representation, Perception, Interpretation, Ethics, and Communication, plus a concise map critique activity.
 - Featured Graphics: learning model for moving from map exploration to publication-style visual explanation.
@@ -38,7 +39,7 @@ public/data/glasgow-simd-2020v2.geojson
 Generate or refresh the file with:
 
 ```bash
-npm.cmd run fetch:simd
+npm run fetch:simd
 ```
 
 The fetch script queries the Scottish Government ArcGIS REST layer for Glasgow City only, saves the returned GeoJSON locally, and the browser reads that local file at runtime. This keeps the deployed app static and avoids live GIS service calls from the public site.
@@ -57,6 +58,8 @@ The Studio supports:
 - Housing rank
 
 In SIMD, lower ranks indicate greater relative deprivation. The Studio reverses rank values for choropleth intensity so darker colours indicate greater deprivation, while popups still show the original SIMD ranks.
+
+The Studio also includes lightweight collapsible details. Students start with the map as the main view, supported by a small reading overlay. The Legend and Diagram details compare the choropleth legend with class counts. The Design Review detail translates guidance from *Mapping for a Sustainable World* into purpose, data, symbolization, and use-environment checks. The Cartographic Note detail gives a compact printable source statement for classroom reporting.
 
 The Studio uses the OpenStreetMap tile endpoint:
 
@@ -110,13 +113,13 @@ npm run dev
 Fetch the Glasgow SIMD layer:
 
 ```bash
-npm.cmd run fetch:simd
+npm run fetch:simd
 ```
 
 Build the static production bundle:
 
 ```bash
-npm.cmd run build
+npm run build
 ```
 
 Preview the production build locally:

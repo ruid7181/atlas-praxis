@@ -259,6 +259,35 @@ const featuredChecklist = [
   "The final takeaway is concise enough for a short presentation.",
 ];
 
+const mappingReferenceUrl = "https://digitallibrary.un.org/record/3898826?ln=en";
+
+const designLenses = {
+  Purpose: {
+    title: "Purpose and audience",
+    principle:
+      "Start from the map purpose and the reader's task: exploration, comparison, critique, or presentation.",
+    prompt: "What decision or discussion should this map support?",
+  },
+  Data: {
+    title: "Data, geography, and time",
+    principle:
+      "Name the location, attribute, and temporal frame before interpreting a pattern.",
+    prompt: "Is the map showing individuals, places, or aggregated enumeration units?",
+  },
+  Symbols: {
+    title: "Symbolization and hierarchy",
+    principle:
+      "Match symbolization, classification, colour, labels, and legend to the data type and message.",
+    prompt: "Does the visual hierarchy lead from pattern to evidence?",
+  },
+  Use: {
+    title: "Use environment",
+    principle:
+      "Design for the medium: web interaction can support exploration, but the main claim still needs to be explicit.",
+    prompt: "What should remain understandable if the map is printed or shown on a small screen?",
+  },
+};
+
 const caseStudies = [
   {
     title: "Construction enthusiasts versus demolition giants",
@@ -471,6 +500,91 @@ function buildLegend(features, variableKey, method, classes, breaks, paletteName
   });
 }
 
+function getMapFormSummary(variableKey, method) {
+  const variable = simdVariables[variableKey];
+  const classification =
+    method === "Official quintile" || method === "Decile"
+      ? "official ordinal grouping"
+      : `${method.toLowerCase()} classes`;
+
+  return {
+    form: "Choropleth map",
+    description: `${variable.label} is mapped over Glasgow data-zone polygons using ${classification}. The mapped geometry is an enumeration unit, so the visible pattern is area-based rather than individual-level.`,
+  };
+}
+
+function getClassificationWarning(method, classCount) {
+  if (method === "Official quintile") {
+    return "Uses the official SIMD grouping, which is easy to explain but can hide variation inside each quintile.";
+  }
+
+  if (method === "Decile") {
+    return "Adds more rank detail than quintiles, but readers need a compact legend and careful colour contrast.";
+  }
+
+  if (method === "Quantile") {
+    return "Balances the number of areas in each class, but equal visual steps may not represent equal value differences.";
+  }
+
+  if (method === "Natural breaks / Jenks") {
+    return "Finds clusters in this dataset, so it is useful for exploration but can be harder to compare across datasets.";
+  }
+
+  if (method === "Standard deviation") {
+    return "Emphasises distance from the mean; explain the statistical reference point before using it for public communication.";
+  }
+
+  return `${classCount} equal-width classes are direct to explain, but skewed data can leave some classes sparse.`;
+}
+
+function getPaletteWarning(paletteName) {
+  const palette = palettes[paletteName];
+
+  if (palette.type === "Diverging") {
+    return "Diverging colour can imply a meaningful midpoint. Use it here as a teaching contrast unless the map claim needs two-sided meaning.";
+  }
+
+  if (palette.type.includes("Colour-blind") || palette.type.includes("Accessibility")) {
+    return "This palette supports broader readability and is a strong default for general audiences.";
+  }
+
+  return "Sequential colour fits ordered deprivation intensity; check that the darkest class does not overstate certainty.";
+}
+
+function buildStandardChecks({ method, classCount, palette, labels, variableKey }) {
+  const variable = simdVariables[variableKey];
+
+  return [
+    {
+      title: "Purpose",
+      status: "Ready",
+      text: `The map is framed as a visual reasoning exercise for ${variable.short.toLowerCase()} comparison.`,
+    },
+    {
+      title: "Data",
+      status: "Disclose",
+      text: "SIMD 2020v2 is relative and area-based; keep the data-zone and individual-level distinction visible.",
+    },
+    {
+      title: "Classification",
+      status: method === "Official quintile" ? "Ready" : "Review",
+      text: getClassificationWarning(method, classCount),
+    },
+    {
+      title: "Colour",
+      status: palettes[palette].type === "Diverging" ? "Review" : "Ready",
+      text: getPaletteWarning(palette),
+    },
+    {
+      title: "Labels",
+      status: labels ? "Review" : "Ready",
+      text: labels
+        ? "Permanent data-zone labels improve identification but can dominate the visual hierarchy."
+        : "Labels are off, keeping the choropleth pattern visually dominant; popups still support inspection.",
+    },
+  ];
+}
+
 function Header({ active, setActive }) {
   return (
     <header className="site-header">
@@ -630,6 +744,8 @@ function Studio() {
   const [classes, setClasses] = useState(5);
   const [opacity, setOpacity] = useState(0.82);
   const [labels, setLabels] = useState(false);
+  const [openStudioDetail, setOpenStudioDetail] = useState("");
+  const [designLens, setDesignLens] = useState("Purpose");
   const [selected, setSelected] = useState("");
   const [hovered, setHovered] = useState(null);
   const [simdGeojson, setSimdGeojson] = useState(null);
@@ -650,14 +766,14 @@ function Studio() {
       .then((response) => {
         if (!response.ok) {
           throw new Error(
-            "Glasgow SIMD data is not available locally. Run npm.cmd run fetch:simd, commit public/data/glasgow-simd-2020v2.geojson, and redeploy."
+            "Glasgow SIMD data is not available locally. Run npm run fetch:simd, commit public/data/glasgow-simd-2020v2.geojson, and redeploy."
           );
         }
         return response.json();
       })
       .then((data) => {
         if (!data?.features?.length) {
-          throw new Error("SIMD data file is empty or invalid. Run npm.cmd run fetch:simd again.");
+          throw new Error("SIMD data file is empty or invalid. Run npm run fetch:simd again.");
         }
         if (!ignore) {
           setSimdGeojson(data);
@@ -670,7 +786,7 @@ function Studio() {
           setSimdGeojson(null);
           setLoadError(
             error.message ||
-              "Glasgow SIMD data is not available locally. Run npm.cmd run fetch:simd, commit public/data/glasgow-simd-2020v2.geojson, and redeploy."
+              "Glasgow SIMD data is not available locally. Run npm run fetch:simd, commit public/data/glasgow-simd-2020v2.geojson, and redeploy."
           );
         }
       });
@@ -707,6 +823,9 @@ function Studio() {
   const displayValues = valuesFor(features, variableKey);
   const minValue = displayValues.length ? Math.min(...displayValues) : undefined;
   const maxValue = displayValues.length ? Math.max(...displayValues) : undefined;
+  const mapSummary = getMapFormSummary(variableKey, method);
+  const standardChecks = buildStandardChecks({ method, classCount, palette, labels, variableKey });
+  const currentLens = designLenses[designLens];
   const layerKey = `${variableKey}-${palette}-${method}-${classCount}-${opacity}-${labels}-${selected}-${hovered || ""}`;
 
   const styleFeature = (feature) => {
@@ -788,53 +907,33 @@ function Studio() {
             />
             {simdGeojson && <GeoJSON key={layerKey} data={simdGeojson} style={styleFeature} onEachFeature={bindFeature} />}
           </MapContainer>
+          <MapReadingOverlay
+            activeFeature={activeFeature}
+            classCount={classCount}
+            method={method}
+            minValue={minValue}
+            maxValue={maxValue}
+            variableKey={variableKey}
+          />
         </div>
 
-        <div className="studio-bottom-grid">
-          <section className="legend-panel" aria-label="Choropleth legend">
-            <h3>Legend</h3>
-            <p>
-              {method}, {classCount} classes. Display values are deprivation intensity: higher means more deprived.
-            </p>
-            <div className="legend-list">
-              {legend.map((item) => (
-                <div className="legend-row" key={item.label}>
-                  <span className="legend-swatch" style={{ background: item.color }} />
-                  <span>{item.label}</span>
-                  <strong>{item.count}</strong>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="reading-panel" aria-label="Selected data zone reading">
-            <p className="eyebrow">Current reading</p>
-            {activeFeature ? (
-              <>
-                <h3>{getDatazoneName(activeFeature)}</h3>
-                <p>
-                  {variable.label}: {formatNumber(getOriginalValue(activeFeature, variableKey))}. Display range:{" "}
-                  {formatNumber(minValue)}-{formatNumber(maxValue)}.
-                </p>
-                <p className="prompt-text">{getInterpretation(activeFeature)}</p>
-              </>
-            ) : (
-              <p>Load the Glasgow SIMD layer to inspect a data zone.</p>
-            )}
-          </section>
-        </div>
-
-        <div className="data-note">
-          <strong>Data note</strong>
-          <p>
-            SIMD is a relative, area-based measure of deprivation. It identifies concentrations of deprivation in data
-            zones, not whether every individual in an area is deprived.
-          </p>
-          <p>
-            Data source: Scottish Government, Scottish Index of Multiple Deprivation 2020v2. Contains Ordnance Survey
-            data © Crown copyright and database right. Used under the Open Government Licence.
-          </p>
-        </div>
+        <StudioDetailDrawer
+          openStudioDetail={openStudioDetail}
+          setOpenStudioDetail={setOpenStudioDetail}
+          activeFeature={activeFeature}
+          classCount={classCount}
+          currentLens={currentLens}
+          designLens={designLens}
+          setDesignLens={setDesignLens}
+          legend={legend}
+          mapSummary={mapSummary}
+          method={method}
+          minValue={minValue}
+          maxValue={maxValue}
+          palette={palette}
+          standardChecks={standardChecks}
+          variableKey={variableKey}
+        />
       </section>
 
       <aside className="control-panel" aria-label="Studio design controls">
@@ -918,6 +1017,315 @@ function Studio() {
         </div>
       </aside>
     </main>
+  );
+}
+
+const studioTabs = [
+  ["legend", "Legend & reading"],
+  ["diagram", "Diagram"],
+  ["review", "Design Review"],
+  ["note", "Cartographic Note"],
+];
+
+function StudioDetailDrawer({
+  openStudioDetail,
+  setOpenStudioDetail,
+  activeFeature,
+  classCount,
+  currentLens,
+  designLens,
+  setDesignLens,
+  legend,
+  mapSummary,
+  method,
+  minValue,
+  maxValue,
+  palette,
+  standardChecks,
+  variableKey,
+}) {
+  return (
+    <section className="studio-details-shell" aria-label="Studio supporting details">
+      <div className="studio-detail-toggles" aria-label="Studio details">
+        {studioTabs.map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            aria-expanded={openStudioDetail === key}
+            className={openStudioDetail === key ? "active" : ""}
+            onClick={() => setOpenStudioDetail(openStudioDetail === key ? "" : key)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {openStudioDetail && (
+      <div className="studio-detail-panel">
+        {openStudioDetail === "legend" && (
+          <ReadingPanel
+            activeFeature={activeFeature}
+            classCount={classCount}
+            legend={legend}
+            method={method}
+            minValue={minValue}
+            maxValue={maxValue}
+            variableKey={variableKey}
+          />
+        )}
+        {openStudioDetail === "diagram" && (
+          <DiagramPanel
+            classCount={classCount}
+            legend={legend}
+            mapSummary={mapSummary}
+            method={method}
+            minValue={minValue}
+            maxValue={maxValue}
+            variableKey={variableKey}
+          />
+        )}
+        {openStudioDetail === "review" && (
+          <DesignReviewPanel
+            currentLens={currentLens}
+            designLens={designLens}
+            setDesignLens={setDesignLens}
+            standardChecks={standardChecks}
+          />
+        )}
+        {openStudioDetail === "note" && (
+          <CartographicNotePanel
+            activeFeature={activeFeature}
+            classCount={classCount}
+            method={method}
+            palette={palette}
+            variableKey={variableKey}
+          />
+        )}
+      </div>
+      )}
+    </section>
+  );
+}
+
+function MapReadingOverlay({ activeFeature, classCount, method, minValue, maxValue, variableKey }) {
+  const variable = simdVariables[variableKey];
+
+  return (
+    <aside className="map-reading-overlay" aria-label="Current map reading">
+      <p className="eyebrow">Current reading</p>
+      {activeFeature ? (
+        <>
+          <h3>{getDatazoneName(activeFeature)}</h3>
+          <p>
+            {variable.short}: {formatNumber(getOriginalValue(activeFeature, variableKey))}. Range{" "}
+            {formatNumber(minValue)}-{formatNumber(maxValue)}.
+          </p>
+          <p className="prompt-text">{getInterpretation(activeFeature)}</p>
+        </>
+      ) : (
+        <p>Load the Glasgow SIMD layer to inspect a data zone.</p>
+      )}
+      <span className="overlay-meta">
+        {method}, {classCount} classes
+      </span>
+    </aside>
+  );
+}
+
+function ReadingPanel({ activeFeature, classCount, legend, method, minValue, maxValue, variableKey }) {
+  const variable = simdVariables[variableKey];
+
+  return (
+    <>
+      <div className="studio-bottom-grid">
+        <section className="legend-panel" aria-label="Choropleth legend">
+          <h3>Legend</h3>
+          <p>
+            {method}, {classCount} classes. Display values are deprivation intensity: higher means more deprived.
+          </p>
+          <div className="legend-list">
+            {legend.map((item) => (
+              <div className="legend-row" key={item.label}>
+                <span className="legend-swatch" style={{ background: item.color }} />
+                <span>{item.label}</span>
+                <strong>{item.count}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="reading-panel" aria-label="Selected data zone reading">
+          <p className="eyebrow">Current reading</p>
+          {activeFeature ? (
+            <>
+              <h3>{getDatazoneName(activeFeature)}</h3>
+              <p>
+                {variable.label}: {formatNumber(getOriginalValue(activeFeature, variableKey))}. Display range:{" "}
+                {formatNumber(minValue)}-{formatNumber(maxValue)}.
+              </p>
+              <p className="prompt-text">{getInterpretation(activeFeature)}</p>
+            </>
+          ) : (
+            <p>Load the Glasgow SIMD layer to inspect a data zone.</p>
+          )}
+        </section>
+      </div>
+
+      <div className="data-note compact-note">
+        <strong>Data note</strong>
+        <p>
+          SIMD is a relative, area-based measure of deprivation. It identifies concentrations of deprivation in data
+          zones, not whether every individual in an area is deprived.
+        </p>
+      </div>
+    </>
+  );
+}
+
+function DiagramPanel({ classCount, legend, mapSummary, method, minValue, maxValue, variableKey }) {
+  const variable = simdVariables[variableKey];
+  const maxLegendCount = Math.max(1, ...legend.map((item) => item.count));
+
+  return (
+    <section className="standard-studio-panel" aria-label="Class distribution and map form">
+      <div className="standard-panel-header">
+        <div>
+          <p className="eyebrow">Diagram companion</p>
+          <h3>Class distribution</h3>
+          <p>Compare the choropleth legend with the number of data zones in each class.</p>
+        </div>
+      </div>
+
+      <div className="diagnostic-grid two-up">
+        <article className="diagnostic-card">
+          <p className="card-kicker">Map form</p>
+          <h4>{mapSummary.form}</h4>
+          <p>{mapSummary.description}</p>
+          <dl className="spec-list">
+            <div>
+              <dt>Mapped attribute</dt>
+              <dd>{variable.label}</dd>
+            </div>
+            <div>
+              <dt>Classification</dt>
+              <dd>
+                {method}, {classCount} classes
+              </dd>
+            </div>
+            <div>
+              <dt>Display range</dt>
+              <dd>
+                {formatNumber(minValue)}-{formatNumber(maxValue)}
+              </dd>
+            </div>
+          </dl>
+        </article>
+
+        <article className="diagnostic-card">
+          <p className="card-kicker">Class counts</p>
+          <h4>Legend as diagram</h4>
+          <p>Uneven class counts can make a colour ramp look more balanced than the data are.</p>
+          <ClassDistribution legend={legend} maxLegendCount={maxLegendCount} />
+        </article>
+      </div>
+    </section>
+  );
+}
+
+function ClassDistribution({ legend, maxLegendCount }) {
+  return (
+    <div className="class-bars" aria-label="Class distribution diagram">
+      {legend.map((item) => (
+        <div className="class-bar-row" key={item.label}>
+          <span className="class-bar-label">{item.label}</span>
+          <span className="class-bar-track">
+            <span
+              className="class-bar-fill"
+              style={{ width: `${Math.max(4, (item.count / maxLegendCount) * 100)}%`, background: item.color }}
+            />
+          </span>
+          <strong>{item.count}</strong>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DesignReviewPanel({ currentLens, designLens, setDesignLens, standardChecks }) {
+  return (
+    <section className="standard-studio-panel" aria-label="Cartographic design review">
+      <div className="standard-panel-header">
+        <div>
+          <p className="eyebrow">Design review</p>
+          <h3>{currentLens.title}</h3>
+          <p>{currentLens.principle}</p>
+          <p className="lens-prompt">{currentLens.prompt}</p>
+        </div>
+      </div>
+
+      <div className="lens-control-wrap">
+        <SegmentedControl label="Design lens" value={designLens} onChange={setDesignLens} options={Object.keys(designLenses)} />
+      </div>
+
+      <div className="standard-check-grid">
+        {standardChecks.map((check) => (
+          <article className="standard-check" key={check.title}>
+            <span className={`check-status status-${check.status.toLowerCase()}`}>{check.status}</span>
+            <h4>{check.title}</h4>
+            <p>{check.text}</p>
+          </article>
+        ))}
+      </div>
+
+      <div className="data-note compact-note">
+        <strong>Reference</strong>
+        <p>
+          <a href={mappingReferenceUrl} target="_blank" rel="noreferrer">
+            Mapping for a Sustainable World
+          </a>{" "}
+          frames map design around data, symbolization, map types, diagrams, audiences, and use environments.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function CartographicNotePanel({ activeFeature, classCount, method, palette, variableKey }) {
+  const variable = simdVariables[variableKey];
+  const selectedName = activeFeature ? getDatazoneName(activeFeature) : "No data zone selected";
+  const selectedValue = activeFeature ? getOriginalValue(activeFeature, variableKey) : undefined;
+
+  return (
+    <section className="standard-studio-panel cartographic-note-panel" aria-label="Printable cartographic note">
+      <div className="standard-panel-header">
+        <div>
+          <p className="eyebrow">Cartographic note</p>
+          <h3>Compact source statement</h3>
+          <p>Use this for printing, short classroom reporting, or moving from exploration to a defensible claim.</p>
+        </div>
+        <button className="secondary print-note-button" onClick={() => window.print()}>
+          Print note
+        </button>
+      </div>
+
+      <article className="diagnostic-card cartographic-note-card">
+        <p className="card-kicker">Selected area</p>
+        <h4>{selectedName}</h4>
+        <p>
+          {variable.label}: {formatNumber(selectedValue)}. {getInterpretation(activeFeature || {})}
+        </p>
+        <ul className="note-list">
+          <li>Geometry: Glasgow data zones, not individual households.</li>
+          <li>Data time: Scottish Index of Multiple Deprivation 2020v2.</li>
+          <li>
+            Classification: {method}, {classCount} classes.
+          </li>
+          <li>Palette: {palette}, {palettes[palette].type.toLowerCase()}.</li>
+          <li>Data source: Scottish Government SIMD 2020v2, used under the Open Government Licence.</li>
+          <li>Boundary note: mapped areas and labels are used for teaching interpretation, not endorsement of any boundary status.</li>
+        </ul>
+      </article>
+    </section>
   );
 }
 
@@ -1168,4 +1576,6 @@ function App() {
   );
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+const rootElement = document.getElementById("root");
+globalThis.atlasPraxisRoot ||= createRoot(rootElement);
+globalThis.atlasPraxisRoot.render(<App />);
