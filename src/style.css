@@ -141,7 +141,10 @@ input:focus-visible,
 }
 
 .studio-layout {
-  grid-template-columns: minmax(0, 1fr) 360px;
+  width: min(1500px, calc(100vw - 24px));
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 18px;
 }
 
 .two-column,
@@ -208,6 +211,24 @@ input:focus-visible,
 .map-panel,
 .control-panel {
   min-width: 0;
+}
+
+.studio-layout .map-panel {
+  padding: 14px;
+}
+
+.studio-layout .panel-title-row {
+  align-items: center;
+}
+
+.studio-layout .panel-copy {
+  max-width: 880px;
+  font-size: 0.94rem;
+}
+
+.studio-layout .panel-copy,
+.studio-layout .map-status-row {
+  display: none;
 }
 
 .eyebrow {
@@ -510,7 +531,7 @@ p {
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
-  margin-top: 16px;
+  margin-top: 10px;
   color: var(--muted);
   font-size: 0.93rem;
 }
@@ -530,11 +551,15 @@ p {
   border: 1px solid var(--line);
 }
 
+.studio-map-frame {
+  position: relative;
+  margin-top: 12px;
+}
+
 .leaflet-shell {
   position: relative;
-  min-height: 360px;
-  height: min(52vh, 680px);
-  margin-top: 12px;
+  min-height: 430px;
+  height: clamp(430px, calc(100dvh - 220px), 780px);
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -688,6 +713,79 @@ p {
   box-shadow: 0 10px 28px rgba(31, 41, 51, 0.18);
 }
 
+.map-control-button {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1200;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  border: 1px solid rgba(217, 224, 231, 0.92);
+  border-radius: var(--radius);
+  padding: 8px 11px;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--ink);
+  box-shadow: 0 10px 26px rgba(31, 41, 51, 0.16);
+  font-weight: 900;
+  pointer-events: auto;
+}
+
+.map-control-button:hover,
+.map-control-button:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent-dark);
+}
+
+.control-panel.map-control-panel {
+  position: absolute;
+  top: 60px;
+  right: 14px;
+  z-index: 1210;
+  width: min(390px, calc(100% - 28px));
+  max-height: calc(100% - 78px);
+  overflow: auto;
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 18px 42px rgba(31, 41, 51, 0.2);
+  pointer-events: auto;
+}
+
+.control-title {
+  justify-content: space-between;
+}
+
+.control-title span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-button {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #ffffff;
+  color: var(--ink);
+}
+
+.icon-button:hover,
+.icon-button:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent-dark);
+}
+
+.control-notes {
+  display: grid;
+  gap: 10px;
+}
+
 .map-reading-overlay h3 {
   margin-bottom: 4px;
   font-size: 1rem;
@@ -713,17 +811,47 @@ p {
 }
 
 .studio-details-shell {
-  margin-top: 12px;
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  left: 390px;
+  z-index: 1100;
+  display: grid;
+  justify-items: end;
   min-width: 0;
+  pointer-events: none;
 }
 
 .studio-detail-toggles {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  width: 100%;
+  justify-content: flex-end;
+  width: auto;
   min-width: 0;
   max-width: 100%;
+  pointer-events: auto;
+}
+
+.detail-open-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  border: 1px solid rgba(217, 224, 231, 0.92);
+  border-radius: var(--radius);
+  padding: 8px 11px;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--ink);
+  box-shadow: 0 10px 26px rgba(31, 41, 51, 0.16);
+  font-weight: 900;
+  pointer-events: auto;
+}
+
+.detail-open-button:hover,
+.detail-open-button:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent-dark);
 }
 
 .studio-detail-toggles button {
@@ -733,7 +861,16 @@ p {
   padding: 7px 10px;
   background: #ffffff;
   color: #354453;
+  box-shadow: 0 8px 20px rgba(31, 41, 51, 0.12);
   font-weight: 800;
+}
+
+.studio-detail-toggles .detail-close-button {
+  display: inline-grid;
+  width: 36px;
+  min-width: 36px;
+  padding: 0;
+  place-items: center;
 }
 
 .studio-detail-toggles button.active,
@@ -745,7 +882,11 @@ p {
 }
 
 .studio-detail-panel {
-  padding-top: 14px;
+  width: min(760px, 100%);
+  max-height: min(430px, calc(100dvh - 330px));
+  overflow: auto;
+  margin-top: 10px;
+  pointer-events: auto;
 }
 
 .standard-studio-panel {
@@ -912,8 +1053,6 @@ p {
 }
 
 .control-panel {
-  position: sticky;
-  top: 92px;
   display: grid;
   gap: 18px;
 }
@@ -1026,6 +1165,11 @@ input[type="range"] {
   padding: 16px;
   background: var(--accent-dark);
   color: white;
+}
+
+.compact-reasoning summary {
+  cursor: pointer;
+  font-weight: 900;
 }
 
 .reasoning-panel ul {
@@ -1178,6 +1322,12 @@ footer {
   .control-panel {
     position: static;
   }
+
+  .control-panel.map-control-panel {
+    position: absolute;
+    top: 60px;
+    right: 12px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1188,6 +1338,11 @@ footer {
   .page {
     width: min(100% - 24px, 1200px);
     margin: 24px auto;
+  }
+
+  .studio-layout {
+    width: min(100% - 12px, 1200px);
+    margin-top: 10px;
   }
 
   h1 {
@@ -1208,8 +1363,13 @@ footer {
 
   .leaflet-shell,
   .leaflet-map {
-    min-height: 360px;
-    height: min(46vh, 480px);
+    min-height: 380px;
+    height: calc(100dvh - 360px);
+    max-height: 520px;
+  }
+
+  .studio-layout .panel-title-row {
+    display: none;
   }
 
   .map-panel .panel-copy,
@@ -1243,18 +1403,43 @@ footer {
   }
 
   .studio-detail-toggles {
-    flex-wrap: wrap;
-    overflow-x: visible;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    width: 100%;
+    overflow-x: auto;
   }
 
   .studio-detail-toggles button {
-    flex: 1 1 145px;
+    flex: 0 0 auto;
   }
 
   .map-reading-overlay {
     left: 10px;
-    bottom: 24px;
+    bottom: 58px;
     width: min(320px, calc(100% - 20px));
+  }
+
+  .map-control-button {
+    top: 10px;
+    right: 10px;
+  }
+
+  .control-panel.map-control-panel {
+    top: 54px;
+    right: 10px;
+    width: min(350px, calc(100% - 20px));
+    max-height: calc(100% - 68px);
+  }
+
+  .studio-details-shell {
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+  }
+
+  .studio-detail-panel {
+    width: 100%;
+    max-height: min(360px, calc(100dvh - 300px));
   }
 
   nav button {

@@ -14,6 +14,7 @@ import {
   Presentation,
   Route,
   SlidersHorizontal,
+  X,
 } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 import "./style.css";
@@ -737,6 +738,10 @@ function SegmentedControl({ label, value, options, onChange, renderOption }) {
   );
 }
 
+function stopMapInteraction(event) {
+  event.stopPropagation();
+}
+
 function Studio() {
   const [variableKey, setVariableKey] = useState("overallRank");
   const [palette, setPalette] = useState("Official SIMD-style");
@@ -745,6 +750,7 @@ function Studio() {
   const [opacity, setOpacity] = useState(0.82);
   const [labels, setLabels] = useState(false);
   const [openStudioDetail, setOpenStudioDetail] = useState("");
+  const [controlsOpen, setControlsOpen] = useState(false);
   const [designLens, setDesignLens] = useState("Purpose");
   const [selected, setSelected] = useState("");
   const [hovered, setHovered] = useState(null);
@@ -899,99 +905,171 @@ function Studio() {
 
         {loadError && <div className="map-alert">{loadError}</div>}
 
-        <div className="leaflet-shell" aria-label="Interactive Leaflet choropleth map centred on Glasgow">
-          <MapContainer center={[55.8642, -4.2518]} zoom={11} scrollWheelZoom className="leaflet-map">
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
-              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+        <div className="studio-map-frame">
+          <div className="leaflet-shell" aria-label="Interactive Leaflet choropleth map centred on Glasgow">
+            <MapContainer center={[55.8642, -4.2518]} zoom={11} scrollWheelZoom className="leaflet-map">
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+                url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              {simdGeojson && <GeoJSON key={layerKey} data={simdGeojson} style={styleFeature} onEachFeature={bindFeature} />}
+            </MapContainer>
+            <MapReadingOverlay
+              activeFeature={activeFeature}
+              classCount={classCount}
+              method={method}
+              minValue={minValue}
+              maxValue={maxValue}
+              variableKey={variableKey}
             />
-            {simdGeojson && <GeoJSON key={layerKey} data={simdGeojson} style={styleFeature} onEachFeature={bindFeature} />}
-          </MapContainer>
-          <MapReadingOverlay
+          </div>
+
+          <button
+            className="map-control-button"
+            type="button"
+            aria-expanded={controlsOpen}
+            onTouchStart={stopMapInteraction}
+            onPointerDown={stopMapInteraction}
+            onMouseDown={stopMapInteraction}
+            onPointerUp={stopMapInteraction}
+            onClick={(event) => {
+              event.stopPropagation();
+              setControlsOpen((isOpen) => !isOpen);
+            }}
+          >
+            <SlidersHorizontal size={17} aria-hidden="true" />
+            <span>Controls</span>
+          </button>
+
+          {controlsOpen && (
+            <StudioControlPanel
+              availableMethods={availableMethods}
+              classes={classes}
+              labels={labels}
+              method={method}
+              opacity={opacity}
+              palette={palette}
+              setClasses={setClasses}
+              setControlsOpen={setControlsOpen}
+              setLabels={setLabels}
+              setMethod={setMethod}
+              setOpacity={setOpacity}
+              setPalette={setPalette}
+              setVariableKey={setVariableKey}
+              variable={variable}
+              variableKey={variableKey}
+            />
+          )}
+
+          <StudioDetailDrawer
+            openStudioDetail={openStudioDetail}
+            setOpenStudioDetail={setOpenStudioDetail}
             activeFeature={activeFeature}
             classCount={classCount}
+            currentLens={currentLens}
+            designLens={designLens}
+            setDesignLens={setDesignLens}
+            legend={legend}
+            mapSummary={mapSummary}
             method={method}
             minValue={minValue}
             maxValue={maxValue}
+            palette={palette}
+            standardChecks={standardChecks}
             variableKey={variableKey}
           />
         </div>
-
-        <StudioDetailDrawer
-          openStudioDetail={openStudioDetail}
-          setOpenStudioDetail={setOpenStudioDetail}
-          activeFeature={activeFeature}
-          classCount={classCount}
-          currentLens={currentLens}
-          designLens={designLens}
-          setDesignLens={setDesignLens}
-          legend={legend}
-          mapSummary={mapSummary}
-          method={method}
-          minValue={minValue}
-          maxValue={maxValue}
-          palette={palette}
-          standardChecks={standardChecks}
-          variableKey={variableKey}
-        />
       </section>
+    </main>
+  );
+}
 
-      <aside className="control-panel" aria-label="Studio design controls">
-        <div className="control-title">
+function StudioControlPanel({
+  availableMethods,
+  classes,
+  labels,
+  method,
+  opacity,
+  palette,
+  setClasses,
+  setControlsOpen,
+  setLabels,
+  setMethod,
+  setOpacity,
+  setPalette,
+  setVariableKey,
+  variable,
+  variableKey,
+}) {
+  return (
+    <aside
+      className="control-panel map-control-panel"
+      aria-label="Studio design controls"
+      onPointerDown={stopMapInteraction}
+      onMouseDown={stopMapInteraction}
+      onClick={stopMapInteraction}
+    >
+      <div className="control-title">
+        <span>
           <SlidersHorizontal size={18} aria-hidden="true" />
-          <span>Design controls</span>
-        </div>
+          Design controls
+        </span>
+        <button className="icon-button" type="button" aria-label="Close design controls" onClick={() => setControlsOpen(false)}>
+          <X size={17} aria-hidden="true" />
+        </button>
+      </div>
 
-        <SegmentedControl
-          label="Mapped variable"
-          value={variableKey}
-          onChange={setVariableKey}
-          options={Object.entries(simdVariables).map(([value, config]) => ({ value, label: config.short }))}
-        />
+      <SegmentedControl
+        label="Mapped variable"
+        value={variableKey}
+        onChange={setVariableKey}
+        options={Object.entries(simdVariables).map(([value, config]) => ({ value, label: config.short }))}
+      />
 
-        <SegmentedControl
-          label="Colour palette"
-          value={palette}
-          onChange={setPalette}
-          options={Object.keys(palettes)}
-          renderOption={(name) => (
-            <>
-              <span>{name}</span>
-              <span className="palette-strip" aria-hidden="true">
-                {palettes[name].colors.map((color) => (
-                  <span key={color} style={{ background: color }} />
-                ))}
-              </span>
-            </>
-          )}
-        />
-
-        <SegmentedControl label="Classification" value={method} onChange={setMethod} options={availableMethods} />
-
-        {method !== "Official quintile" && method !== "Decile" && (
-          <label className="range-control">
-            <span>Number of classes: {classes}</span>
-            <input type="range" min="3" max="7" value={classes} onChange={(event) => setClasses(Number(event.target.value))} />
-          </label>
+      <SegmentedControl
+        label="Colour palette"
+        value={palette}
+        onChange={setPalette}
+        options={Object.keys(palettes)}
+        renderOption={(name) => (
+          <>
+            <span>{name}</span>
+            <span className="palette-strip" aria-hidden="true">
+              {palettes[name].colors.map((color) => (
+                <span key={color} style={{ background: color }} />
+              ))}
+            </span>
+          </>
         )}
+      />
 
+      <SegmentedControl label="Classification" value={method} onChange={setMethod} options={availableMethods} />
+
+      {method !== "Official quintile" && method !== "Decile" && (
         <label className="range-control">
-          <span>Layer opacity: {Math.round(opacity * 100)}%</span>
-          <input
-            type="range"
-            min="0.35"
-            max="1"
-            step="0.01"
-            value={opacity}
-            onChange={(event) => setOpacity(Number(event.target.value))}
-          />
+          <span>Number of classes: {classes}</span>
+          <input type="range" min="3" max="7" value={classes} onChange={(event) => setClasses(Number(event.target.value))} />
         </label>
+      )}
 
-        <label className="toggle">
-          <input type="checkbox" checked={labels} onChange={(event) => setLabels(event.target.checked)} />
-          <span>Show data zone labels</span>
-        </label>
+      <label className="range-control">
+        <span>Layer opacity: {Math.round(opacity * 100)}%</span>
+        <input
+          type="range"
+          min="0.35"
+          max="1"
+          step="0.01"
+          value={opacity}
+          onChange={(event) => setOpacity(Number(event.target.value))}
+        />
+      </label>
 
+      <label className="toggle">
+        <input type="checkbox" checked={labels} onChange={(event) => setLabels(event.target.checked)} />
+        <span>Show data zone labels</span>
+      </label>
+
+      <div className="control-notes">
         <div className="method-note">
           <strong>{variable.label}</strong>
           <p>{variable.description}</p>
@@ -1006,17 +1084,17 @@ function Studio() {
           <strong>{palettes[palette].type} palette</strong>
           <p>{palettes[palette].note}</p>
         </div>
+      </div>
 
-        <div className="reasoning-panel">
-          <strong>Reasoning prompts</strong>
-          <ul>
-            {reasoningPrompts.map((prompt) => (
-              <li key={prompt}>{prompt}</li>
-            ))}
-          </ul>
-        </div>
-      </aside>
-    </main>
+      <details className="reasoning-panel compact-reasoning">
+        <summary>Reasoning prompts</summary>
+        <ul>
+          {reasoningPrompts.map((prompt) => (
+            <li key={prompt}>{prompt}</li>
+          ))}
+        </ul>
+      </details>
+    </aside>
   );
 }
 
@@ -1046,63 +1124,104 @@ function StudioDetailDrawer({
 }) {
   return (
     <section className="studio-details-shell" aria-label="Studio supporting details">
-      <div className="studio-detail-toggles" aria-label="Studio details">
-        {studioTabs.map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            aria-expanded={openStudioDetail === key}
-            className={openStudioDetail === key ? "active" : ""}
-            onClick={() => setOpenStudioDetail(openStudioDetail === key ? "" : key)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {!openStudioDetail && (
+        <button
+          className="detail-open-button"
+          type="button"
+          onPointerDown={stopMapInteraction}
+          onMouseDown={stopMapInteraction}
+          onClick={(event) => {
+            event.stopPropagation();
+            setOpenStudioDetail("legend");
+          }}
+        >
+          <Layers size={17} aria-hidden="true" />
+          <span>Details</span>
+        </button>
+      )}
 
       {openStudioDetail && (
-      <div className="studio-detail-panel">
-        {openStudioDetail === "legend" && (
-          <ReadingPanel
-            activeFeature={activeFeature}
-            classCount={classCount}
-            legend={legend}
-            method={method}
-            minValue={minValue}
-            maxValue={maxValue}
-            variableKey={variableKey}
-          />
+        <>
+          <div className="studio-detail-toggles" aria-label="Studio details">
+            {studioTabs.map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                aria-expanded={openStudioDetail === key}
+                className={openStudioDetail === key ? "active" : ""}
+                onPointerDown={stopMapInteraction}
+                onMouseDown={stopMapInteraction}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setOpenStudioDetail(key);
+                }}
+              >
+                {label}
+              </button>
+            ))}
+            <button
+              className="detail-close-button"
+              type="button"
+              aria-label="Close details"
+              onPointerDown={stopMapInteraction}
+              onMouseDown={stopMapInteraction}
+              onClick={(event) => {
+                event.stopPropagation();
+                setOpenStudioDetail("");
+              }}
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          </div>
+
+          <div
+            className="studio-detail-panel"
+            onPointerDown={stopMapInteraction}
+            onMouseDown={stopMapInteraction}
+            onClick={stopMapInteraction}
+          >
+            {openStudioDetail === "legend" && (
+              <ReadingPanel
+                activeFeature={activeFeature}
+                classCount={classCount}
+                legend={legend}
+                method={method}
+                minValue={minValue}
+                maxValue={maxValue}
+                variableKey={variableKey}
+              />
+            )}
+            {openStudioDetail === "diagram" && (
+              <DiagramPanel
+                classCount={classCount}
+                legend={legend}
+                mapSummary={mapSummary}
+                method={method}
+                minValue={minValue}
+                maxValue={maxValue}
+                variableKey={variableKey}
+              />
+            )}
+            {openStudioDetail === "review" && (
+              <DesignReviewPanel
+                currentLens={currentLens}
+                designLens={designLens}
+                setDesignLens={setDesignLens}
+                standardChecks={standardChecks}
+              />
+            )}
+            {openStudioDetail === "note" && (
+              <CartographicNotePanel
+                activeFeature={activeFeature}
+                classCount={classCount}
+                method={method}
+                palette={palette}
+                variableKey={variableKey}
+              />
+            )}
+          </div>
+        </>
         )}
-        {openStudioDetail === "diagram" && (
-          <DiagramPanel
-            classCount={classCount}
-            legend={legend}
-            mapSummary={mapSummary}
-            method={method}
-            minValue={minValue}
-            maxValue={maxValue}
-            variableKey={variableKey}
-          />
-        )}
-        {openStudioDetail === "review" && (
-          <DesignReviewPanel
-            currentLens={currentLens}
-            designLens={designLens}
-            setDesignLens={setDesignLens}
-            standardChecks={standardChecks}
-          />
-        )}
-        {openStudioDetail === "note" && (
-          <CartographicNotePanel
-            activeFeature={activeFeature}
-            classCount={classCount}
-            method={method}
-            palette={palette}
-            variableKey={variableKey}
-          />
-        )}
-      </div>
-      )}
     </section>
   );
 }
