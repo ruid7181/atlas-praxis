@@ -29,10 +29,10 @@ No course assessment details or internal marking criteria are needed for this ex
    Introduce the learning pathway: Observe -> Modify -> Critique -> Communicate. Emphasise that the goal is to reason with map design, not to find a single correct map.
 
 2. Studio exploration, 10 minutes  
-   Students open Studio and change one setting at a time: classification, colour palette, number of classes, opacity, or labels. They record what becomes more visible and what becomes less visible.
+   Students open Studio and keep the map as the main view while changing one setting at a time: classification, colour palette, number of classes, opacity, or labels. They record what becomes more visible and what becomes less visible. Then ask them to expand Diagram and compare the choropleth legend with the class-distribution bars.
 
 3. Critique framework, 10 minutes  
-   Students use the Critique page to discuss Representation, Perception, Interpretation, Ethics, and Communication. Each group should identify one strength and one design risk.
+   Students use the Critique page to discuss Representation, Perception, Interpretation, Ethics, and Communication. Each group should identify one strength and one design risk, then expand Design Review to check whether the purpose, data, symbols, and use-environment lenses support that judgement.
 
 4. Debrief, 5 minutes  
    Ask students to state one geographic claim the map supports and one condition under which that claim would need qualification.
@@ -46,13 +46,13 @@ No course assessment details or internal marking criteria are needed for this ex
    Students inspect the default choropleth and describe the apparent spatial pattern before changing any controls.
 
 3. Modify, 15 minutes  
-   Students test classification and colour choices. They compare equal interval and quantile classifications and note how the perceived pattern changes.
+   Students test classification and colour choices. They compare equal interval and quantile classifications and note how the perceived pattern changes. They should expand Diagram only after the first observation round, so the class-distribution bars support rather than replace map reading.
 
 4. Critique, 15 minutes  
    Students apply the five-part framework. Encourage them to separate data representation choices from visual perception choices.
 
 5. Communicate, 10 minutes  
-   Students open Featured Graphics and turn their strongest interpretation into a working title, one annotation idea, and one takeaway sentence.
+   Students open Featured Graphics and turn their strongest interpretation into a working title, one annotation idea, and one takeaway sentence. They can expand Cartographic Note in Studio as a compact source statement for data, classification, palette, and boundary cautions.
 
 6. Share, 5 minutes  
    Each group gives a brief verbal account of the design choice that most changed their interpretation.
